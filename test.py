@@ -1,13 +1,29 @@
-probs = [[1.74145531654, -1.74145293236], [0.781296014786, -0.781293451786], [0.881425738335, -0.88142323494],  [0.186622142792, -0.18661954999], [0.374709069729, -0.374706447124]]
-n_classes = 2
-dict = {}
-for i in range(n_classes):
-	dict[i] = []
+import dataset
+dset = dataset.Dataset()
+# dset.make_probs_file("jihad", 4)
+dset.make_seed_datasets()
 
-for prob in probs:
-	for idx in range(n_classes):
-		dict[idx].append(prob[idx])
-print dict
+# import al
+# al.find_threshold_subject("werk")
 
-import pandas as pd
-print pd.DataFrame(dict)
+
+
+# subprocesses
+# import thread, time, threading
+#
+# def spinner():
+# 	while True:
+# 		print '.'
+# 		time.sleep(1)
+#
+# def task():
+# 	time.sleep(5)
+#
+# if __name__ == '__main__':
+#
+#
+# 	t = threading.Thread(target=task, args=())
+# 	t.start()
+# 	while t.is_alive():
+# 		# print next iteration of ASCII spinner
+# 		print "test"
