@@ -1,6 +1,8 @@
-prob_path =
-seed_path =
-threshold_path = "/media/cluster/data1/lambert/results/thresholds/
-meta_path_nn =
-meta_data_path =
-seed_data_path =
+def get_config():
+    from os.path import expanduser
+    home = expanduser("~")
+    print home
+    import ConfigParser
+    Config = ConfigParser.ConfigParser()
+    Config.read(home + "/config.txt")
+    return Config

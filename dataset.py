@@ -1,18 +1,25 @@
 import os
 import sys
 import logging
+import pandas as pd
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
 class Dataset:
-	logger.info("")
-	import pandas as pd
-	all_hashtags = ["voetbal", "moslim", "werk", "economie", "jihad", "seks", "politiek"]
 
-	all_vectors_store = pd.HDFStore("/media/cluster/data1/lambert/data_sample_vector_id.clean.h5")
-	balanced_store = pd.HDFStore("/media/cluster/data1/lambert/datasets/seeds/balanced.h5")
-	tweets = pd.read_csv("/media/cluster/data1/lambert/lambert_w2v_data_jan_tweet_id.csv", names=["id", "text"])
+	def __init__(self, root):
+		self.root = root
+		self.all_hashtags = ["voetbal", "moslim", "werk", "economie", "jihad", "seks", "politiek"]
+		self.all_vectors_store = pd.HDFStore(self.root + "data_sample_vector_id.clean.h5")
+		self.balanced_store = pd.HDFStore(self.root + "datasets/seeds/balanced.h5")
+		self.tweets = pd.read_csv(self.root + "lambert_w2v_data_jan_tweet_id.csv", names=["id", "text"])
+
+	def set_root(self, root):
+		self.root = root
+
+	def get_root(self):
+		return self.root
 
 	def transform_dataset(self, data, n_classes):
 		logger.info("Transforming data for %i classes", n_classes)
@@ -73,24 +80,24 @@ class Dataset:
 
 	def save_meta_dataset(self, hashtag, threshold, hashtag_label):
 		import pandas as pd
-		data = pd.read_csv("/media/cluster/data1/lambert/results/probs/" + hashtag + ".csv", usecols=["id", "probs", "text"])
+		data = pd.read_csv(self.root + "results/probs/" + hashtag + ".csv", usecols=["id", "probs", "text"])
 		data = data.dropna()
 		data["probs"] = data["probs"].apply(lambda x: float(x))
 		ids = data[data["probs"] > threshold].id
 		vectors = self.all_vectors_store.select("data", where=self.all_vectors_store["data"]["id"].isin(ids))
 		vectors["labels"] = hashtag_label
-		vectors.to_hdf("/media/cluster/data1/lambert/datasets/meta_subjects/" + hashtag + ".h5", "data")
+		vectors.to_hdf(self.root + "datasets/meta_subjects/" + hashtag + ".h5", "data")
 
 
-	def get_meta_dataset(path, hashtags):
+	def get_meta_dataset(self, hashtags):
 		import pandas as pd
-		meta_dataset = pd.read_hdf( "/media/cluster/data1/lambert/datasets/meta_subjects/" + hashtags[0] + ".h5", "data")
+		meta_dataset = pd.read_hdf(self.root + "datasets/meta_subjects/" + hashtags[0] + ".h5", "data")
 
 		# Balance the data so that the largest group is taken as the reference group
 		reference_size = len(meta_dataset.index)
 		dataset = meta_dataset
 		for hashtag in hashtags[1:]:
-			meta_dataset = pd.read_hdf( "/media/cluster/data1/lambert/datasets/meta_subjects/" + hashtag + ".h5", "data")
+			meta_dataset = pd.read_hdf( self.root + "datasets/meta_subjects/" + hashtag + ".h5", "data")
 			meta_dataset = meta_dataset.sample(n=reference_size, replace=True)
 			dataset = dataset.append(meta_dataset)
 
@@ -98,12 +105,12 @@ class Dataset:
 
 	def make_probs_file(self, hashtag, i):
 		import pandas as pd
-		data = pd.read_hdf("/media/cluster/data1/lambert/results/seeds/" + str(i) + "/probs.h5")
+		data = pd.read_hdf(self.root + "results/seeds/" + str(i) + "/probs.h5")
 		probs = data[i]
 		ids = data.id
 		df = pd.DataFrame({"id": ids, "probs": probs, "text": self.tweets.text})
 		df = df.sort_values(by=["probs"], ascending=False) #TEST!
-		df.to_csv("/media/cluster/data1/lambert/results/probs/" + hashtag + ".csv")
+		df.to_csv(self.root + "results/probs/" + hashtag + ".csv")
 
 
 	def get_seed_dataset(self, labels):

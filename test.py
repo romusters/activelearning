@@ -1,7 +1,7 @@
-import dataset
-dset = dataset.Dataset()
-# dset.make_probs_file("jihad", 4)
-dset.make_seed_datasets()
+# import dataset
+# dset = dataset.Dataset()
+# # dset.make_probs_file("jihad", 4)
+# dset.make_seed_datasets()
 
 # import al
 # al.find_threshold_subject("werk")
@@ -27,3 +27,4 @@ dset.make_seed_datasets()
 # 	while t.is_alive():
 # 		# print next iteration of ASCII spinner
 # 		print "test"
+

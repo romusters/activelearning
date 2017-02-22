@@ -5,13 +5,13 @@ import logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
-def find_threshold_subject(hashtag):
+def find_threshold_subject(hashtag, root):
 	import pandas as pd
 
 	# print "The subject is: %s" % hashtag
 	# print "Please press 1 if the tweets are about the subject or press 0 otherwise. "
 
-	data = pd.read_csv("/media/cluster/data1/lambert/results/probs/" + hashtag + ".csv", usecols=["id", "probs", "text"])
+	data = pd.read_csv(root + "results/probs/" + hashtag + ".csv", usecols=["id", "probs", "text"])
 	data = data.dropna()
 
 	data["probs"] = data["probs"].apply(lambda x: float(x))
@@ -96,7 +96,7 @@ def find_threshold_subject(hashtag):
 			prev_center = center
 		break
 	logger.info("Save threshold in /thresholds/ for %s", hashtag)
-	f = open("/media/cluster/data1/lambert/results/thresholds/" + hashtag, "w")
+	f = open(root + "results/thresholds/" + hashtag, "w")
 	f.write(str(center))
 	f.close()
 

@@ -1,8 +1,33 @@
-import dataset
-dset = dataset.Dataset()
-nn_data = dset.get_seed_dataset([0,4])
-nn_data["labels"] = nn_data["labels"].replace(4, 1)
-nn_data = dset.transform_dataset(nn_data, 2)
+import pandas as pd
+import os
+import sys
+import logging
+import numpy as np
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger(__name__)
+
+import config
+
+conf = config.get_config()
+root = eval(conf.get("paths", "root"))
+print root
+
+
+new_data = False
+path = root + "results/test/0/two_class.npy"
+if new_data:
+    import dataset
+    dset = dataset.Dataset(root)
+    nn_data = dset.get_seed_dataset([0,4])
+    nn_data["labels"] = nn_data["labels"].replace(4, 1)
+    nn_data = dset.transform_dataset(nn_data, 2)
+
+    logger.info("Saving two class")
+
+    np.save(path, nn_data)
+else:
+    nn_data = np.load(path).item()
 
 import numpy as np
 import features
@@ -25,14 +50,18 @@ import pandas as pd
 
 
 import nn
-path = "/media/cluster/data1/lambert/results/test/"
+path = root + "results/test/"
 nn.train_nn(path, nn_data, 0)
 
-# # vergelijk jihad2.csv met een nn die 1v1 doet
-# import pandas as pd
-# data = pd.read_hdf("/media/cluster/data1/lambert/results/seeds/0/probs.h5")
+# vergelijk jihad2.csv met een nn die 1v1 doet
+import pandas as pd
+# data = pd.read_hdf(root + "results/seeds/0/probs.h5")
 # probs = data[1]
 # ids = data.id
 # df = pd.DataFrame({"id": ids, "probs": probs, "text": dset.tweets.text})
 # df = df.sort_values(by=["probs"], ascending=False) #TEST!
-# df.to_csv("/media/cluster/data1/lambert/results/probs/jihad3.csv")
+# df.to_csv(root + "results/probs/jihad3.csv")
+
+
+# import al
+# al.find_threshold_subject("jihad3", root)
