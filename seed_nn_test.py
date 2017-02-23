@@ -51,7 +51,9 @@ import pandas as pd
 
 import nn
 path = root + "results/test/"
-nn.train_nn(path, nn_data, 0)
+# nn.train_nn(path, nn_data, 0)
+
+
 
 # vergelijk jihad2.csv met een nn die 1v1 doet
 import pandas as pd
@@ -63,5 +65,16 @@ import pandas as pd
 # df.to_csv(root + "results/probs/jihad3.csv")
 
 
-# import al
+import al
 # al.find_threshold_subject("jihad3", root)
+# import dataset
+# dset = dataset.Dataset(root)
+# import pandas as pd
+# data = pd.read_hdf(root + "results/test/0/probs.h5")
+# probs = data[1]
+# ids = data.id
+# df = pd.DataFrame({"id": ids, "probs": probs, "text": dset.tweets.text})
+# df = df.sort_values(by=["probs"], ascending=False) #TEST!
+# df.to_csv(root + "results/test/0/jihad.csv")
+
+al.find_threshold_subject("voetbal_test", root)

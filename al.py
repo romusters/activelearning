@@ -36,7 +36,7 @@ def find_threshold_subject(hashtag, root):
 			logger.info("The current threshold is %f", t)
 			if inp == 0:
 				# print "not about the subject"
-				t +=1
+				t +=.1
 				tmp = data[data["probs"] > t]
 				print tmp.head()["text"].values
 				try:
@@ -47,7 +47,7 @@ def find_threshold_subject(hashtag, root):
 			if inp == 1:
 				# print "about the subject!"
 				flag = False
-				prev_t = t-1
+				prev_t = t-.1
 			if round_count > 10:
 				flag = False
 			round_count+=1
