@@ -13,30 +13,23 @@ print root
 # make seed datasets per hashtag // located in /datasets/subjects
 
 
-
 # First iteration, train seeds: voetbal versus moslim, because in noise there could also be tweets about the subject
 import dataset
 dset = dataset.Dataset(root)
 
+# nn_data = dset.get_seed_dataset([0,1])
+# nn_data = dset.transform_dataset(nn_data, 2)
+#
+# import nn
+#
+# nn.train_nn(root + "results/seeds/", nn_data, 0)
 
-# train seeds versus seeds
-import nn
-for i in range(0, len(dset.all_hashtags)-1, 2):
-	print dset.all_hashtags[i], dset.all_hashtags[i+1]
-	nn_data = dset.get_seed_dataset([i, i+1])
-	nn_data = dset.transform_dataset(nn_data, i,  2)
-
-	nn.train_nn(root + "results/seeds/", nn_data, i)
-	dset.make_probs_file(dset.all_hashtags[i], i, 0)
-	dset.make_probs_file(dset.all_hashtags[i+1], i, 1)
-
-
-
+#
+#
 # # Get the thresholds belonging to the first two seeds
 import al
-for i in range(4, len(dset.all_hashtags)):
-	print dset.all_hashtags[i]
-	al.find_threshold_subject(dset.all_hashtags[i], root)
+# dset.make_probs_file("voetbal", 0)
+# al.find_threshold_subject( "voetbal", root)
 
 dset.make_probs_file("moslim", 0, 1)
 al.find_threshold_subject("moslim", root)

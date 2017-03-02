@@ -79,7 +79,8 @@ def train_nn(path, nn_data, nn_id):
 
         _, loss = sess.run([train_step, cross_entropy], feed_dict={x: batch_data, y_: batch_labels})
         # _, loss = sess.run([train_step, cost], feed_dict={x: batch_data, y_: batch_labels})
-        print loss
+        # print loss
+
         test_acc = sess.run(accuracy, feed_dict={x: test_data, y_: test_labels})
         train_acc = sess.run(accuracy, feed_dict={x: batch_data, y_: batch_labels})
 

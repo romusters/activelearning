@@ -10,7 +10,7 @@ class Dataset:
 
 	def __init__(self, root):
 		self.root = root
-		self.all_hashtags = ["voetbal", "moslim", "werk", "economie", "jihad", "seks", "politiek"]
+		self.all_hashtags = ["voetbal", "moslim", "werk", "economie","jihad", "seks", "politiek"]  #
 		self.all_vectors_store = pd.HDFStore(self.root + "data_sample_vector_id.clean.h5")
 		self.balanced_store = pd.HDFStore(self.root + "datasets/seeds/balanced.h5")
 		self.tweets = pd.read_csv(self.root + "lambert_w2v_data_jan_tweet_id.csv", names=["id", "text"])
@@ -21,11 +21,35 @@ class Dataset:
 	def get_root(self):
 		return self.root
 
-	def transform_dataset(self, data, n_classes):
+	# def transform_dataset(self, data, n_classes):
+	# 	logger.info("Transforming data for %i classes", n_classes)
+	# 	import numpy as np
+	# 	import features
+	# 	data = data.dropna()
+	# 	trainset = data.sample(frac=0.8, random_state=200)
+	# 	testset = data.drop(trainset.index)
+	#
+	# 	result = {}
+	# 	result["trainset"] = np.array(trainset[range(70)].values.tolist())
+	# 	result["trainlabels"] = np.array(trainset["labels"].apply(lambda x: features.onehot(x, n_classes - 1)).values.tolist())
+	# 	result["trainids"] = np.array(trainset.id.values.tolist())
+	# 	result["testdata"] = np.array(testset[range(70)].values.tolist())
+	# 	result["testlabels"] = np.array(testset["labels"].apply(lambda x: features.onehot(x, n_classes - 1)).values.tolist())
+	# 	result["testids"] = np.array(testset.id.values.tolist())
+	# 	result["nclasses"] = n_classes
+	# 	result["allvectors"] = np.array(self.all_vectors_store["data"][range(70)].values.tolist())
+	# 	result["allvectorsids"] = np.array(self.all_vectors_store["data"]["id"].values.tolist())
+	#
+	# 	return result
+
+	def transform_dataset(self, data, i, n_classes):
 		logger.info("Transforming data for %i classes", n_classes)
 		import numpy as np
 		import features
 		data = data.dropna()
+		data["labels"] = data["labels"].replace(i, 0)
+		data["labels"] = data["labels"].replace(i+1, 1)
+		data.index = range(0, len(data.index)) # needed because some sets are so large, all the ids get removed in the testset
 		trainset = data.sample(frac=0.8, random_state=200)
 		testset = data.drop(trainset.index)
 
@@ -41,7 +65,6 @@ class Dataset:
 		result["allvectorsids"] = np.array(self.all_vectors_store["data"]["id"].values.tolist())
 
 		return result
-
 
 	def transform_dataset_meta(self, data, n_classes):
 		import numpy as np
@@ -103,10 +126,10 @@ class Dataset:
 
 		return dataset
 
-	def make_probs_file(self, hashtag, i):
+	def make_probs_file(self, hashtag, seed_id, column_id=None):
 		import pandas as pd
-		data = pd.read_hdf(self.root + "results/seeds/" + str(i) + "/probs.h5")
-		probs = data[i]
+		data = pd.read_hdf(self.root + "results/seeds/" + str(seed_id) + "/probs.h5")
+		probs = data[column_id]
 		ids = data.id
 		df = pd.DataFrame({"id": ids, "probs": probs, "text": self.tweets.text})
 		df = df.sort_values(by=["probs"], ascending=False) #TEST!
