@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 Train the network, get the evaluation metrics, save the weights and get the probabilities from all the data
 '''
 def train_nn(path, nn_data, nn_id):
+    logger.info("In train function")
     import time
     t = time.time()
     import os
@@ -43,28 +44,29 @@ def train_nn(path, nn_data, nn_id):
     import pickle as p
     sess = tf.InteractiveSession()
     dim = 70
-    x = tf.placeholder(tf.float32, shape=[None, dim], name="Input")
-    y_ = tf.placeholder(tf.float32, shape=[None, n_classes], name="Output")
-    # W = tf.Variable(tf.zeros([dim, n_classes]))
-    # b = tf.Variable(tf.zeros([n_classes]))
-    W = tf.Variable(tf.random_normal([dim, n_classes]))
-    b = tf.Variable(tf.random_normal([n_classes]))
+    with tf.device('/gpu:0'):
+        x = tf.placeholder(tf.float32, shape=[None, dim], name="Input")
+        y_ = tf.placeholder(tf.float32, shape=[None, n_classes], name="Output")
+        # W = tf.Variable(tf.zeros([dim, n_classes]))
+        # b = tf.Variable(tf.zeros([n_classes]))
+        W = tf.Variable(tf.random_normal([dim, n_classes]))
+        b = tf.Variable(tf.random_normal([n_classes]))
 
-    # y = tf.matmul(x, W) + b
-    hidden = tf.nn.relu(tf.add(tf.matmul(x, W), b))
+        # y = tf.matmul(x, W) + b
+        hidden = tf.nn.relu(tf.add(tf.matmul(x, W), b))
 
-    y = tf.nn.softmax(hidden)
-    # cost = tf.reduce_mean(((y_ * tf.log(y)) +  ((1 - y_) * tf.log(1.0 - y))) * -1)
-    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))  # PREVIOUS softmax
-    train_step = tf.train.AdagradOptimizer(1.0).minimize(cross_entropy)
-    # train_step = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
-    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        y = tf.nn.softmax(hidden)
+        # cost = tf.reduce_mean(((y_ * tf.log(y)) +  ((1 - y_) * tf.log(1.0 - y))) * -1)
+        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))  # PREVIOUS softmax
+        train_step = tf.train.AdagradOptimizer(1.0).minimize(cross_entropy)
+        # train_step = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
+        correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     sess.run(tf.global_variables_initializer())
 
     batch_size = 1000
     batch_count = len(train_data) / batch_size
-    epochs = 8
+    epochs = 200 # was 8
     losses = []
     train_accs = []
     test_accs = []
@@ -72,6 +74,7 @@ def train_nn(path, nn_data, nn_id):
 
     logger.info("Start training neural network: %i", nn_id)
     for i in range(batch_count * epochs):
+
         begin = (i % batch_count) * batch_size
         end = (i % batch_count + 1) * batch_size
         batch_data = np.array(train_data[begin: end])
@@ -80,7 +83,8 @@ def train_nn(path, nn_data, nn_id):
         _, loss = sess.run([train_step, cross_entropy], feed_dict={x: batch_data, y_: batch_labels})
         # _, loss = sess.run([train_step, cost], feed_dict={x: batch_data, y_: batch_labels})
         # print loss
-
+        if i % batch_count == 0:
+            print i/batch_count, loss
         test_acc = sess.run(accuracy, feed_dict={x: test_data, y_: test_labels})
         train_acc = sess.run(accuracy, feed_dict={x: batch_data, y_: batch_labels})
 
