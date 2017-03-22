@@ -14,9 +14,9 @@ print root
 
 new_data = False
 path = root + "results/test/0/two_class.npy"
+import dataset
+dset = dataset.Dataset(root)
 if False:
-    import dataset
-    dset = dataset.Dataset(root)
     nn_data = dset.get_seed_dataset([0,4]) # voetbal and jihad
     nn_data["labels"] = nn_data["labels"].replace(4, 1)
     nn_data = dset.transform_dataset(nn_data, 0, 2)
@@ -26,6 +26,11 @@ if False:
     np.save(path, nn_data)
 else:
     nn_data = np.load(path).item()
+
+
+
+import sys
+sys.exit(0)
 data = pd.DataFrame(nn_data["trainset"])
 
 import numpy as np
@@ -63,10 +68,12 @@ ntokens = merged
 rm_list = ["<stopword>", "<mention>", "<url>", "rt"]
 
 ntokens["count"] = merged.filtered_text.apply(lambda x: len([a for a in x.split() if a not in rm_list]))
-filter = ntokens[ntokens["count"] > 10]
 
-df = pd.DataFrame({"id": filter.id, "probs": filter[0], "text": filter.text, "tokens": filter.filtered_text})
-df.to_csv(root + "results/test/voetbal.csv")
+for i in range(1, 20):
+    filter = ntokens[ntokens["count"] == i]
+
+    df = pd.DataFrame({"id": filter.id, "probs": filter[0], "text": filter.text, "tokens": filter.filtered_text})
+    df.to_csv(root + "results/test/voetbal"+ str(i) + ".csv")
 print df
 # probs = data[1]
 # print data

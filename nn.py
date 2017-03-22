@@ -42,9 +42,10 @@ def train_nn(path, nn_data, nn_id):
     import numpy as np
     from sklearn import metrics
     import pickle as p
-    sess = tf.InteractiveSession()
+
     dim = 70
     with tf.device('/gpu:0'):
+        sess = tf.InteractiveSession()
         x = tf.placeholder(tf.float32, shape=[None, dim], name="Input")
         y_ = tf.placeholder(tf.float32, shape=[None, n_classes], name="Output")
         # W = tf.Variable(tf.zeros([dim, n_classes]))
@@ -62,9 +63,10 @@ def train_nn(path, nn_data, nn_id):
         # train_step = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
         correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    sess.run(tf.global_variables_initializer())
+        sess.run(tf.global_variables_initializer())
 
     batch_size = 1000
+    print len(train_data)
     batch_count = len(train_data) / batch_size
     epochs = 200 # was 8
     losses = []

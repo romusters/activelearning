@@ -21,10 +21,10 @@ def get_vectors(data_name, vector_name, model_name):
 
     store = pd.HDFStore(vector_name)
     chunksize = 10000
-    data = pd.read_csv(data_name, header=None, names=["text", "filtered_text", "id"], iterator=True,
-                       chunksize=chunksize)
-    chunk = data.get_chunk()
+    data = pd.read_csv(data_name, iterator=True, chunksize=chunksize)
 
+    chunk = data.get_chunk()
+    print chunk
     idx = 0
     while chunk is not None:
         print idx
@@ -71,3 +71,7 @@ def test_model(fname):
 
         for el in els:
             print data.words[el]
+
+
+# w2vmodel_to_hdf("/home/robert/lambert/w2vmodel")
+# get_vectors("/home/robert/lambert/datasets/data_sample.csv", "/home/robert/lambert/datasets/vectors.h5","/home/robert/lambert/models/w2vmodel")

@@ -15,14 +15,17 @@ root, data_path, model_path, vector_path = config.get_paths()
 # w2v.test_model(model_path)
 
 # # convert data_jan.csv into sample, bceause else the dataset is just too large
-# data = pd.read_csv(data_path, names = ["text", "filtered_text", "id"])
-# print data
+# data = pd.read_csv(data_path + "data.csv", names = ["text", "filtered_text", "id"])
+# data = data.dropna()
+# data.index = data.id
+# data = data.drop("id", axis=1)
+# # print data
 # sample = data.sample(frac=0.1)
-# sample.to_csv(data_path.replace(".csv", "_sample.csv"))
+# sample.to_csv(data_path + "data_sample.csv")
 
 
 # convert data to vectors with id
-# w2v.get_vectors(data_path, vector_path, model_path)
+# w2v.get_vectors(data_path + "data_sample.csv", vector_path, model_path + "w2vmodel")
 
 
 
@@ -30,15 +33,17 @@ root, data_path, model_path, vector_path = config.get_paths()
 import dataset
 dset = dataset.Dataset(root)
 
+
 # get the subject seeds and ..
-# dset.create_subject_sets()
-
-
+dset.create_subject_sets()
+# import sys
+# sys.exit(0)
 
 #.. balance them.
-dset.balance_data()
+# dset.balance_data()
 import sys
 sys.exit(0)
+
 
 
 # train seeds versus seeds

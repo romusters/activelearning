@@ -18,7 +18,7 @@ class Dataset:
         self.all_hashtags = ["voetbal", "moslim", "werk", "economie","jihad", "seks", "politiek"]  #
         self.all_vectors_store = pd.HDFStore(self.root + "w2v_vector.h5")
         self.balanced_store = pd.HDFStore(self.root + "datasets/seeds/balanced.h5")
-        self.tweets = pd.read_csv(self.root + "/datasets/data_sample.csv")
+        self.tweets = pd.read_csv(self.root + "datasets/data_sample.csv")
 
     def set_root(self, root):
         self.root = root
@@ -187,22 +187,19 @@ class Dataset:
 
     def create_subject_sets(self):
         logging.info("Tweet path : %s", self.data_path)
-
-        # all_tweets = pd.read_csv(self.data_path, names=["id", "text"])
         print "%i tweets read" % self.tweets.count()[0]
 
         for idx, hashtag in enumerate(self.all_hashtags):
             print hashtag
 
-            hashtag_set = self.tweets[self.tweets.text.str.contains(hashtag)] # Or add # to only select hashtags
-            print hashtag_set
-            print len(hashtag_set.index)
-            vectors = self.all_vectors_store.select("data", where=self.all_vectors_store["data"].id.isin(hashtag_set.id))
+            hashtag_set = self.tweets[self.tweets.filtered_text.str.contains( hashtag)] # Or add # to only select hashtags
+            hashtag_set.index = hashtag_set["id"]
+            vectors = self.all_vectors_store.select("data", where=self.all_vectors_store["data"]["id"].isin(hashtag_set.id))
             print "%i tweets found for subject %s" % (len(vectors.index), hashtag)
             # create label
-
             vectors["labels"] = idx
-            print vectors
+            vectors.index = vectors["id"]
+            hashtag_set.to_csv(self.root + "datasets/seeds/" + hashtag + ".csv")
             vectors.to_hdf(self.root + "datasets/seeds/" + hashtag + ".h5", "data", format="table")
             print "Subject %s written." % hashtag
 
@@ -211,8 +208,10 @@ class Dataset:
         for hashtag in self.all_hashtags:
             tmp = pd.HDFStore(self.root + "datasets/seeds/" + hashtag + ".h5")["data"]
             tmp.index = tmp.id
+            print len(tmp.id)
             all = all.append(tmp)
-        all_tweets = pd.read_csv(self.data_path, names=["id", "text"])
+        all_tweets = pd.read_csv(self.data_path + "data_sample.csv")
+        # print all_tweets
         all_ids = all_tweets["id"]
         print len(all.index)
         print len(all_ids)
@@ -221,15 +220,39 @@ class Dataset:
     def balance_data(self):
         logging.info("Tweet path : %s", self.data_path)
         data = self.load_all_data()
+        # drop data with more than one instance of an id, because these are overlapping subjects
         data = data.drop_duplicates("id", keep=False)
         size_largest_label = data.groupby("labels").count().id.max()  # 42869
-        print size_largest_label
+        print "largest label is: %i" % size_largest_label
 
         balanced_data = pd.DataFrame()
         for label in set(data["labels"]):
             category_data = data[data["labels"] == label]
             new_data = category_data.sample(n=size_largest_label, replace=True)
+            print "size of balanced subject data %i", new_data.id.count()
             balanced_data = balanced_data.append(new_data)
         balanced_data = balanced_data.sample(frac=1)
         print len(balanced_data.index)
         balanced_data.to_hdf(self.root + "datasets/seeds/balanced.h5", "data")
+
+def create_sample(data_path):
+    data = pd.read_csv(data_path + "data.csv", names = ["text", "filtered_text", "id"])
+    df = data.dropna()
+    print "Data size before deduplification: %i" % len(df.index)
+    df = df.drop_duplicates("id")
+    print "Data size after deduplification: %i" % len(df.index)
+
+    print "Data size before nan drop: %i " % len(df.index)
+    df = df.dropna()
+    print "Data size after nan drop: %i" % len(df.index)
+    # data.index = data.id
+    # data = data.drop("id", axis=1)
+    # print data
+    sample = df.sample(frac=0.2)
+    sample.to_csv(data_path + "data_sample.csv")
+
+
+# dset = Dataset("/home/robert/lambert/")
+# dset.create_subject_sets()
+
+
