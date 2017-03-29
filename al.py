@@ -11,49 +11,73 @@ def find_threshold_subject(hashtag, root):
     # print "The subject is: %s" % hashtag
     # print "Please press 1 if the tweets are about the subject or press 0 otherwise. "
 
-    data = pd.read_csv(root + "results/probs/" + hashtag + ".csv", usecols=["id", "probs", "text"])
+    data = pd.read_csv(root + "results/probs/" + hashtag + ".csv", usecols=["id", "0", "text"])
     data = data.dropna()
 
-    data["probs"] = data["probs"].apply(lambda x: float(x))
-    data = data.sort_values(by=["probs"], ascending=False) # changed sort to sort_values and the parameter colums= to by=
-    probs = data["probs"]
-    start_t = 1.0  # (max(probs)-min(probs))/2
-    delta = 0.0001
+    data["0"] = data["0"].apply(lambda x: float(x))
+    data = data.sort_values(by=["0"], ascending=False) # changed sort to sort_values and the parameter colums= to by=
+    probs = data["0"]
+    # start_t = 1.0  # (max(probs)-min(probs))/2
+    start_t = data["0"][0]
+    print start_t
+    delta = 0.01
     # tmp = data[data["probs"] > t]
     # print tmp.head()["text"].values
     # if probs are large enough to be voetbal, lower t.
 
     first = True # some subjects have tweets with the highest probability which are not about the subject
     round_count = 0
+    labels = []
+    ids = []
+    tweets = []
     # assume the list is ordered from voetbal -2 to not voetbal +10 or sth.
     while True:
         print "The subject is: %s" % hashtag
         print "Please press 1 if the tweets are about the subject or press 0 otherwise. "
         logger.info("The start threshold is: %f" % start_t)
-        tmp = data[data["probs"] < start_t]
-        print tmp.head()["text"].values
+        tmp = data[data["0"] < start_t]
+        head = tmp.head(1)
+        tweet =  head["text"].values[0]
+        tweets.append(tweet)
+        id = head["id"].values[0]
+        ids.append(id)
+        print tweet
         flag = True
         inp = int(input())
+
         t = start_t
         prev_t = start_t
+        if inp == 1:
+            t-=delta
+            prev_t = t
+            # labels.append(1)
+
+
         while flag:
             logger.info("The current threshold is %f", t)
             if inp == 1:
                 # print "about the subject"
                 t -=delta
-                tmp = data[data["probs"] < t]
-                print tmp.head()["text"].values
+                tmp = data[data["0"] < t]
+                head = tmp.head(1)
+                tweet = head["text"].values[0]
+                tweets.append(tweet)
+                id = head["id"].values[0]
+                ids.append(id)
+                print tweet
                 try:
                     inp = int(input())
                 except (SyntaxError, NameError):
                     print "wrong input, please press 1 or 0"
                     inp = int(input())
+                labels.append(1)
             if inp == 0:
                 if first:
-                    t -= 0.1
+                    t = prev_t
                 # print "not about the subject!"
                 flag = False
                 prev_t = t+delta
+                labels.append(0)
             if round_count > 10:
                 flag = False
             round_count+=1
@@ -72,8 +96,13 @@ def find_threshold_subject(hashtag, root):
         def test(high,low, center):
             print "The subject is: %s" % hashtag
             print "Please press 1 if the tweets are about the subject or press 0 otherwise. "
-            tmp = data[data["probs"] < center]
-            print tmp.head()["text"].values
+            tmp = data[data["0"] < center]
+            head = tmp.head(1)
+            tweet = head["text"].values[0]
+            tweets.append(tweet)
+            id = head["id"].values[0]
+            ids.append(id)
+            print tweet
             # If there is no data above the threshold
             if len(tmp.index) == 0:
                 print "empty DATA"
@@ -85,8 +114,10 @@ def find_threshold_subject(hashtag, root):
                 inp = int(input())
             if inp == 0:
                 new_low = high-(high-center)/2.0
+                labels.append(0)
                 return high, center, high-(high-center)/2.0
             elif inp == 1:
+                labels.append(1)
                 return center, low, center - (center - low)/2.0
 
         prev_center = 1.0
@@ -104,6 +135,11 @@ def find_threshold_subject(hashtag, root):
             round_count +=1
             prev_center = center
         break
+    result = pd.DataFrame({"ids": ids, "labels": labels, "text": tweets})
+    result.to_csv(root + "results/thresholds/al_annotation_"+ hashtag + ".csv")
+    print labels
+    print ids
+    print tweets
     logger.info("Save threshold in /thresholds/ for %s", hashtag)
     f = open(root + "results/thresholds/" + hashtag, "w")
     f.write(str(center))
@@ -134,4 +170,5 @@ def n_tokens_accuracy(root, hashtag):
     result_path = root + "/results/test/voetbal/result.csv"
     df.to_csv(result_path)
 
-n_tokens_accuracy("/home/robert/lambert/", "voetbal")
+find_threshold_subject("10", "/home/robert/lambert/")
+find_threshold_subject("all_tokens", "/home/robert/lambert/")

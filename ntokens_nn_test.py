@@ -41,10 +41,15 @@ jihad["ntokens"] = jihad.filtered_text.apply(lambda x: len([a for a in x.split()
 
 #determine largest group tokens->10
 # print merged.groupby("ntokens").agg("count")
-for i in range(2, 30, 2):
+for i in range(1, 19, 1):
     print "Ntokens == %i" % i
     #get vectors from voetbal with i tokens
-    d_voetbal = voetbal[voetbal.ntokens == i].sample(n=3000, replace=True)
+    d_voetbal = None
+    try:
+        d_voetbal = voetbal[voetbal.ntokens == i].sample(n=3000, replace=True)
+    except ValueError:
+        print "voetbal has zero samples"
+        continue
     count = len(d_voetbal.index)
     print "Voetbal data size %i" % count
     d_jihad = jihad[jihad.ntokens == i]
