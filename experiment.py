@@ -22,21 +22,22 @@ n_tokens = range(1, 19, 1)
 # let user annotate files
 print "please annotate files"
 
+def highest_ntoken_acc():
 # determine the ntokens setting with the highest accuracy
-best_token = None
-max_val = 0
-accuracy = []
-for token in n_tokens:
-    data = pd.read_csv(root + "results/" + str(token) + "_head.csv", usecols=["label"])
+    best_token = None
+    max_val = 0
+    accuracy = []
+    for token in n_tokens:
+        data = pd.read_csv(root + "results/" + str(token) + "_head.csv", usecols=["label"])
 
-    current_val = data.label.sum()
-    accuracy.append(current_val)
-    if current_val > max_val:
-        max_val = current_val
-        best_token = token
-print "Best token is: %i" % best_token
+        current_val = data.label.sum()
+        accuracy.append(current_val)
+        if current_val > max_val:
+            max_val = current_val
+            best_token = token
+    print "Best token is: %i" % best_token
 
-print accuracy
+    print accuracy
 
 # determine the threshold for the ntokens setting with the highest accuracy
 # import al
@@ -50,34 +51,79 @@ print accuracy
 
 # use the annotations to show that neural networks per ntokens is better than without ntokens seperation.
 # load different ntokens annotations
-all_data = pd.DataFrame()
-for token in n_tokens:
-    head_data = pd.read_csv(root + "results/" + str(token) + "_head.csv", usecols=["id", "label"])
-    # check for labels 0 and 1, respectively correct and incorrect if the all tokens neural network performs better
-    head_data = head_data[head_data.label == 1]
-    token_data = pd.read_csv(root + "results/" + str(token) + ".csv", usecols=["id", "0", "text"])
+def normality_voetbal():
+    all_data = pd.DataFrame()
+    for token in n_tokens:
+        head_data = pd.read_csv(root + "results/" + str(token) + "_head.csv", usecols=["id", "label"])
+        # check for labels 0 and 1, respectively correct and incorrect if the all tokens neural network performs better
+        head_data = head_data[head_data.label == 1]
+        token_data = pd.read_csv(root + "results/" + str(token) + ".csv", usecols=["id", "0", "text"])
 
-    data = pd.merge(head_data, token_data, on="id")
-    all_data = all_data.append(data)
-print all_data["0"].describe()
+        data = pd.merge(head_data, token_data, on="id")
+        all_data = all_data.append(data)
+    print all_data["0"].describe()
 
-vectors = pd.read_hdf(vector_path)
-vectors=  vectors[vectors.id.isin(all_data.id)][range(70)]
+    vectors = pd.read_hdf(vector_path)
+    vectors=  vectors[vectors.id.isin(all_data.id)][range(70)]
 
-import scipy.stats as stats
-import numpy as np
-ps = stats.mstats.normaltest(vectors, axis=0).pvalue
-print stats.describe(ps)
-print len(ps[ps<0.05])
+    import scipy.stats as stats
+    import numpy as np
+    ps = stats.stats.normaltest(vectors, axis=0).pvalue
+    print stats.describe(ps)
+    print len(ps[ps<0.05])
 
-# load all tokens ..
-all_tokens_data =  data = pd.read_csv(root + "results/all_tokens.csv", usecols=["id", "0"])
-all_tokens_data = all_tokens_data[all_tokens_data.id.isin(all_data.id)]
-print all_tokens_data["0"].describe()
-# is the probs of all_data different than the tokens_data?
-#.. and compare the distribution of the probs for neural network trained with different tokens and all tokens
+    # load all tokens ..
+    all_tokens_data =  data = pd.read_csv(root + "results/all_tokens.csv", usecols=["id", "0"])
+    all_tokens_data = all_tokens_data[all_tokens_data.id.isin(all_data.id)]
+    print all_tokens_data["0"].describe()
+    # is the probs of all_data different than the tokens_data?
+    #.. and compare the distribution of the probs for neural network trained with different tokens and all tokens
 
-print stats.ttest_ind(all_data["0"], all_tokens_data["0"], equal_var=False) # False means Welch ttest due to unequal var
+    print stats.ttest_ind(all_data["0"], all_tokens_data["0"], equal_var=False) # False means Welch ttest due to unequal var
 
 
-# plot loss, accuracy
+def get_all_voetbal():
+    import os
+    result_path = "/media/robert/DataUbuntu/Dropbox/Dropbox/Master/proefpersonen/"
+    directories = [d for d in os.listdir(result_path) if os.path.isdir(result_path + d)]
+
+    voetbal_ids = []
+    import pandas as pd
+    for dir in directories:
+        for token in n_tokens:
+            head_data = pd.read_csv(result_path + dir + "/" + str(token) + "_head.csv", usecols=["id", "label"])
+            head_data = head_data[head_data.label == 1]
+            voetbal_ids.extend(head_data.id.values.tolist())
+
+        head_all_token_data = pd.read_csv(result_path + dir + "/all_tokens_head.csv", usecols=["id", "label"])
+        head_all_token_data = head_all_token_data[head_all_token_data.label == 1]
+        voetbal_ids.extend(head_all_token_data.id.values.tolist())
+        all_token_data = pd.read_csv(result_path + dir + "/thresholds/10_annotate.csv", usecols=["id", "label"])
+        all_token_data = all_token_data[all_token_data.label == 1]
+        voetbal_ids.extend(all_token_data.id.values.tolist())
+        all_token_data = pd.read_csv(result_path + dir + "/thresholds/all_tokens_annotate.csv", usecols=["id", "label"])
+        all_token_data = all_token_data[all_token_data.label == 1]
+        voetbal_ids.extend(all_token_data.id.values.tolist())
+    voetbal_ids = list(set(voetbal_ids))
+    voetbal_ids.sort()
+    print voetbal_ids
+    # print set(voetbal_ids)
+    vectors = pd.read_hdf(vector_path)
+    ids = vectors[vectors.id.isin(set(voetbal_ids))]["id"]
+    return ids
+
+def normality():
+    ids = get_all_voetbal()
+    vectors = pd.read_hdf(vector_path)
+    vectors = vectors[vectors.id.isin(ids)][range(70)]
+    vectors = vectors.dropna()
+    print vectors
+    import scipy.stats as stats
+    ps = stats.mstats.normaltest(vectors, axis=0).pvalue
+    print stats.describe(ps)
+    print len(ps[ps < 0.05])
+        # plot loss, accuracy
+
+
+# get_all_voetbal()
+# normality()

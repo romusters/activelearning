@@ -12,18 +12,24 @@ import os
 directories=[d for d in os.listdir(result_path) if os.path.isdir(result_path + d)]
 
 import pandas as pd
-
+import numpy as np
 # Accuracy on 100 head_10 and n_tokens
 def acc_100():
     print "All tokens correct count"
+    all_accs=[]
     for dir in directories:
         data = pd.read_csv(result_path + dir + "/thresholds/all_tokens_annotate.csv")
-        print data["label"].sum()
+        all_accs.append(data["label"].sum())
     print "Head 10 correct count"
+    tens_accs = []
     for dir in directories:
         data = pd.read_csv(result_path + dir + "/thresholds/10_annotate.csv")
-        print data["label"].sum()
-
+        tens_accs.append(data["label"].sum())
+    import scipy.stats as stats
+    print all_accs
+    print tens_accs
+    print np.mean(all_accs), np.mean(tens_accs)
+    print stats.ttest_ind(all_accs, tens_accs, equal_var=False)
 
 # Accuracy on heads
 def acc_heads():
@@ -33,23 +39,30 @@ def acc_heads():
     print dict
     import numpy as np
 
-    for dir in directories:
+    for i in range(1, 19):
         arr = []
-        for i in range(1,19):
+        for dir in directories:
             data = pd.read_csv(result_path + dir + "/" + str(i) + "_head.csv")
+            # determine how many of the top tweets are about voetbal
             arr.append(data["label"].sum())
-        dict[dir] = np.array(arr)
+        dict[i] = np.array(arr)
     # from scipy import stats
     # means = stats.describe(np.array(dict.values())).mean
     # vars = stats.describe(np.array(dict.values())).variance
     # print means
     # print vars
+    print dict
     traces = []
-    for (i, val) in enumerate(dict.values()):
-        traces.append(Box(y=val))
+    for i in range(1,19):
+        traces.append(Box(y=dict[i], name=str(i) + " tokens" ))
     data = traces
     layout = Layout(
-        title="Cohen-Kappa score per subject pairs",
+        title="Number of correct tweets per amount of tokens",
+        showlegend=False,
+        yaxis=YAxis(
+            title="Number of correct tweets"
+        ),
+
     )
     fig = Figure(data=data, layout=layout)
     plot(fig)
@@ -135,9 +148,131 @@ def inter_rater():
     fig = Figure(data=data, layout=layout)
     plot(fig)
 
+def plot_kmeans():
+    import pandas as pd
+    data = pd.read_csv("/home/robert/lambert/results/kmeans.csv")
+    x = data.n_clusters
+    y = data.wssse
+    print y.values.tolist()
+    trace = Scatter(x=x, y=y, mode="markers", marker=dict(color="rgb(0,0,0)"))
+
+    data = [trace]
+    layout = Layout(title="WSSSE for different amount of clusters", xaxis=dict(title="Clusters"),
+                    yaxis=dict(title="WSSSE"))
+    fig = Figure(data=data, layout=layout)
+    plot(fig)
 
 
+def plot_scatter_binary_search_correct_incorrect():
+    subject = directories[0]
+    path = result_path + subject + "/thresholds/all_tokens_annotate.csv"
+    print path
+    data = pd.read_csv(path)
+    data = data.sort_values("0", ascending=False)
+    grouped = data["0"].groupby(data["label"])
+    print grouped.get_group(0)
+
+    trace_correct = Scatter(x=grouped.get_group(1).index, y=grouped.get_group(1).values.tolist(), mode="markers", marker=dict(color="rgb(0,255,0)"), name="Correct")
+    trace_incorrect = Scatter(x=grouped.get_group(0).index, y=grouped.get_group(0).values.tolist(), mode="markers", marker=dict(color="rgb(255,0,0)"), name="Incorrect")
+
+    data = [trace_correct, trace_incorrect]
+    layout = Layout(title="Tweets about voetbal which are classified correctly or <br> incorrectly using the Binary Search method.", xaxis=dict(title="Tweet id"),
+                    yaxis=dict(title="Probabilities from the word2vec model"))
+    fig = Figure(data=data, layout=layout)
+    plot(fig)
+
+
+
+def plot_histogram_binary_search_correct_incorrect():
+    subject = directories[0]
+    path = result_path + subject + "/thresholds/all_tokens_annotate.csv"
+    print path
+    data = pd.read_csv(path)
+    data = data.sort_values("0", ascending=False)
+    grouped = data["0"].groupby(data["label"])
+    print grouped.get_group(0)
+
+    trace_correct = Histogram(y=grouped.get_group(1).index, x=grouped.get_group(1).values.tolist(), xbins=dict(start=0.9995, end=1.000, size=0.0001),
+                            marker=dict(color="rgb(0,255,0)"), opacity=0.75, name="Correct")
+    trace_incorrect = Histogram(y=grouped.get_group(0).index, x=grouped.get_group(0).values.tolist(),xbins=dict(start=0.9995, end=1.000, size=0.0001),
+                              marker=dict(color="rgb(255,0,0)"), opacity=0.75, name="Incorrect")
+
+    data = [trace_correct, trace_incorrect]
+    layout = Layout(
+        title="Tweets about voetbal which are classified correctly or <br> incorrectly using the Binary Search method",
+        xaxis=dict(title="Probabilities from the word2vec model"),
+        yaxis=dict(title="Number of occurrences"),
+        barmode="overlay")
+    fig = Figure(data=data, layout=layout)
+    plot(fig)
+
+def plot_f1():
+    data = pd.read_hdf("/home/robert/lambert/metrics.h5")
+    print data
+    trace = Scatter(x=range(len(data["f1"])), y=data["f1"], name="F1 score",  line = dict(width = 1), opacity= 0.3)
+    import numpy as np
+    y = np.convolve(data["f1"], np.ones((50,)) / 50, mode="valid")
+    trace_smooth = Scatter(x=range(len(data["f1"])), y=y, name="F1 score smoothed", showlegend=False, line=dict(width=1))
+    layout = Layout(title="F1 score for voetbal and jihad datasets",
+                    xaxis=dict(title="Iterations"), yaxis=dict(title="F1 score"))
+    traces = [trace, trace_smooth]
+    fig = Figure(data=traces, layout=layout)
+    plot(fig)
+
+
+def plot_loss():
+    data = pd.read_hdf("/home/robert/lambert/metrics.h5")
+    print data
+    trace = Scatter(x=range(len(data["loss"])), y=data["loss"], name="Loss",  line = dict(width = 1), opacity= 0.3)
+    import numpy as np
+    y = np.convolve(data["loss"], np.ones((10,)) / 10, mode="valid")
+    trace_smooth = Scatter(x=range(len(data["loss"])), y=y, name="Loss smoothed", line=dict(width=1))
+    layout = Layout(title="Loss for voetbal and jihad datasets",
+                    xaxis=dict(title="Iterations"), yaxis=dict(title="Loss"))
+    traces = [trace, trace_smooth]
+    fig = Figure(data=traces, layout=layout)
+    plot(fig)
+
+def plot_train_test():
+    data = pd.read_hdf("/home/robert/lambert/metrics.h5")
+    import numpy as np
+    trace_train = Scatter(x=range(len(data["trainacc"])), y=data["trainacc"], name="Training accuracy", line=dict(width=1), opacity=0.3)
+    y = np.convolve(data["trainacc"], np.ones((10,)) / 10, mode="valid")
+    trace_train_smooth = Scatter(x=range(len(data["trainacc"])), y=y, name="Training accuracy smoothed", line=dict(width=1))
+    trace_test = Scatter(x=range(len(data["testacc"])), y=data["testacc"], name="Testing accuracy", line=dict(width=1),
+                    opacity=0.3)
+    y = np.convolve(data["testacc"], np.ones((10,)) / 10, mode="valid")
+    trace_test_smooth = Scatter(x=range(len(data["testacc"])), y=y, name="Testing accuracy smoothed", line=dict(width=1))
+    layout = Layout(title="Train- and test accuracy for voetbal and jihad datasets",
+                    xaxis=dict(title="Iterations"), yaxis=dict(title="Accuracy"))
+
+    traces = [trace_train, trace_train_smooth, trace_test, trace_test_smooth]
+    fig = Figure(data=traces, layout=layout)
+    plot(fig)
+
+
+
+
+import time
 # acc_100()
+# time.sleep(2)
 acc_heads()
-# acc_all_ntokens()
+time.sleep(2)
+acc_all_ntokens()
+# time.sleep(2)
 # inter_rater()
+# time.sleep(2)
+# plot_kmeans()
+# time.sleep(2)
+# import clusters
+# clusters.voetbal_in_clusters()
+# time.sleep(2)
+# plot_histogram_binary_search_correct_incorrect()
+# time.sleep(2)
+# plot_scatter_binary_search_correct_incorrect()
+# time.sleep(2)
+# plot_train_test()
+# time.sleep(2)
+# plot_loss()
+# time.sleep(2)
+# plot_f1()
