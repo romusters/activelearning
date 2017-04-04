@@ -7,6 +7,9 @@ Acquire results from test subjects
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot
 from plotly.graph_objs import *
 
+import config
+root, data_path, model_path, vector_path = config.get_paths()
+
 result_path = "/media/robert/DataUbuntu/Dropbox/Dropbox/Master/proefpersonen/"
 import os
 directories=[d for d in os.listdir(result_path) if os.path.isdir(result_path + d)]
@@ -55,6 +58,15 @@ def acc_heads():
     traces = []
     for i in range(1,19):
         traces.append(Box(y=dict[i], name=str(i) + " tokens" ))
+
+    #all_tokens_head for all users
+    arr = []
+    for dir in directories:
+        data = pd.read_csv(result_path + dir + "/all_tokens_head.csv")
+        # determine how many of the top tweets are about voetbal
+        arr.append(data["label"].sum())
+    dict["all tokens"] = np.array(arr)
+    traces.append(Box(y=dict["all tokens"], name="all tokens"))
     data = traces
     layout = Layout(
         title="Number of correct tweets per amount of tokens",
@@ -83,6 +95,77 @@ def acc_all_ntokens():
     from scipy import stats
     print stats.describe(np.array(arr))
 
+# compare the average probability for tweets about soccer which are labeled as soccer for each ntoken dataset and all tokendataset
+def heads_compared_to_alltokens_using_ntokens():
+    dict = {}
+    for i in range(1, 19):
+        dict[i] = None
+
+    all_tokens_data = pd.read_csv(root + "results/all_tokens.csv")
+    all_tokens_data.rename(columns={"0": "all_tokens_probs"}, inplace=True)
+
+    for i in range(1, 19):
+        mean_df = pd.DataFrame()
+        for dir in directories:
+            labeled_ntoken_data = pd.read_csv(result_path + dir + "/" + str(i) + "_head.csv")
+            ntoken_data = pd.read_csv(root + "results/" + str(i) + ".csv")
+            correct_ids = labeled_ntoken_data[labeled_ntoken_data.label == 1].id
+            ntoken_data = ntoken_data[ntoken_data.id.isin(correct_ids)]
+            merged = pd.merge(ntoken_data, all_tokens_data, on="id")
+            tmp_data = pd.DataFrame({"0": [merged["0"].mean()], "all_tokens_probs": [merged.all_tokens_probs.mean()]})
+            mean_df = mean_df.append(tmp_data)
+        dict[i] = mean_df
+    print dict
+
+    import scipy.stats as stats
+
+    for i,e in dict.iteritems():
+        ntoken_data = e["0"]
+        all_tokens_data = e["all_tokens_probs"]
+
+        print i, stats.ttest_ind(ntoken_data, all_tokens_data, equal_var=False), all_tokens_data.mean() > ntoken_data.mean()
+
+# compare all labels from all_tokens dataset and group them by amount of tokens. Then compare the probabilities of each group
+def compare_all_tokens_vs_ntokens():
+    import scipy.stats as stats
+    # get all the labels for the all_tokens case
+    dict = {}
+    for dir in directories:
+        dict[dir] = None
+    all_data = pd.DataFrame()
+    for dir in directories:
+        data = pd.read_csv(result_path + dir + "/thresholds/all_tokens_annotate.csv")
+        data = data[data.label == 1]
+        all_data = all_data.append(data)
+    # all_data.drop_duplicates("id")
+
+
+   # get the all_tokens file with the ntokens column
+    data = pd.read_csv(root + "results/all_tokens.csv")
+    data.rename(columns={"0": "all_tokens_probs"}, inplace=True)
+    grouped = data[data.id.isin(all_data.id)].groupby("ntokens")
+    traces = []
+    for name, group in grouped:
+
+        ntoken_data = pd.read_csv(root + "results/" + str(name) + ".csv")
+        # ntoken_data = ntoken_data[ntoken_data.id.isin(group.id)]
+        ntoken_data = pd.merge(ntoken_data, group, on="id")
+        all_tokens_probs = group["all_tokens_probs"]
+        ntoken_probs = ntoken_data["0"]
+        print name, stats.ttest_ind(ntoken_probs, all_tokens_probs, equal_var=False), ntoken_probs.mean() > all_tokens_probs.mean()
+        traces.append(Box(y=all_tokens_probs, name=str(name) + " tokens"))
+        traces.append(Box(y=ntoken_probs, name=str(name) + " tokens per nn", boxpoints=False, marker= {"color": "black"}))
+    data = traces
+    layout = Layout(
+        title="",
+        showlegend=False,
+        yaxis=YAxis(
+            title="Probability"
+        ),
+
+    )
+    fig = Figure(data=data, layout=layout)
+    plot(fig)
 
 # Inter rater agreement on heads
 def inter_rater():
@@ -256,9 +339,9 @@ def plot_train_test():
 import time
 # acc_100()
 # time.sleep(2)
-acc_heads()
-time.sleep(2)
-acc_all_ntokens()
+# acc_heads()
+# time.sleep(2)
+# acc_all_ntokens()
 # time.sleep(2)
 # inter_rater()
 # time.sleep(2)
@@ -276,3 +359,5 @@ acc_all_ntokens()
 # plot_loss()
 # time.sleep(2)
 # plot_f1()
+# heads_compared_to_alltokens_using_ntokens()
+compare_all_tokens_vs_ntokens()
