@@ -7,6 +7,8 @@ Acquire results from test subjects
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot
 from plotly.graph_objs import *
 
+import time
+
 import config
 root, data_path, model_path, vector_path = config.get_paths()
 
@@ -69,7 +71,7 @@ def acc_heads():
     traces.append(Box(y=dict["all tokens"], name="all tokens"))
     data = traces
     layout = Layout(
-        title="Number of correct tweets per amount of tokens",
+        title="Number of correct top 20 tweets with heighest softmax value per amount of tokens",
         showlegend=False,
         yaxis=YAxis(
             title="Number of correct tweets"
@@ -137,24 +139,59 @@ def compare_all_tokens_vs_ntokens():
         data = pd.read_csv(result_path + dir + "/thresholds/all_tokens_annotate.csv")
         data = data[data.label == 1]
         all_data = all_data.append(data)
-    # all_data.drop_duplicates("id")
 
 
+    heads_df = pd.DataFrame()
+    for i in range(1, 19):
+        for dir in directories:
+            data = pd.read_csv(result_path + dir + "/" + str(i) + "_head.csv")
+            data = data[data.label == 1]
+            heads_df = heads_df.append(data)
+
+    all_data = all_data.append(heads_df)
+    all_data.drop_duplicates("id")
    # get the all_tokens file with the ntokens column
     data = pd.read_csv(root + "results/all_tokens.csv")
     data.rename(columns={"0": "all_tokens_probs"}, inplace=True)
-    grouped = data[data.id.isin(all_data.id)].groupby("ntokens")
+    # grouped = data[data.id.isin(all_data.id)].groupby("ntokens")
+    grouped = pd.merge(all_data, data, on="id").groupby("ntokens")
     traces = []
+    ntoken_probs_mean = []
+    all_tokens_probs_mean = []
+    ttests = []
+    biggers = []
+    counts = []
     for name, group in grouped:
-
         ntoken_data = pd.read_csv(root + "results/" + str(name) + ".csv")
+
         # ntoken_data = ntoken_data[ntoken_data.id.isin(group.id)]
         ntoken_data = pd.merge(ntoken_data, group, on="id")
         all_tokens_probs = group["all_tokens_probs"]
-        ntoken_probs = ntoken_data["0"]
-        print name, stats.ttest_ind(ntoken_probs, all_tokens_probs, equal_var=False), ntoken_probs.mean() > all_tokens_probs.mean()
-        traces.append(Box(y=all_tokens_probs, name=str(name) + " tokens"))
-        traces.append(Box(y=ntoken_probs, name=str(name) + " tokens per nn", boxpoints=False, marker= {"color": "black"}))
+        # print ntoken_data
+        ntoken_probs = ntoken_data["0_x"]
+        t_test = stats.ttest_ind(ntoken_probs, all_tokens_probs, equal_var=False)
+        # print name, all_tokens_probs.count(), stats.ttest_ind(ntoken_probs, all_tokens_probs, equal_var=False), ntoken_probs.mean() > all_tokens_probs.mean()
+        ttests.append(float(t_test[1]))
+        biggers.append(all_tokens_probs.mean() > ntoken_probs.mean())
+        ntoken_probs_mean.append(ntoken_probs.mean())
+        all_tokens_probs_mean.append( all_tokens_probs.mean())
+        counts.append(all_tokens_probs.count())
+        #
+        # traces.append(Box(y=all_tokens_probs, name=str(name) + " tokens"))
+        # traces.append(Box(y=ntoken_probs, name=str(name) + " tokens per nn", boxpoints=False, marker= {"color": "black"}))
+
+    import plotly.figure_factory as ff
+    data_matrix = [["n tokens", "p-value", "All tokens", "N tokens", "All > N", "N samples"]]
+
+    import numpy as np
+    # ttests = np.array(ttests)
+    ttests = [0.33, 0.18, "0.00", 0.06, 0.16, "0.00", 0.19, "0.00", "0.00", "0.00", "0.00", 0.24, "0.00", 0.21, 0.41, "0.00", 0.77, 0.21]
+    data_matrix.extend(zip(range(19), ttests, all_tokens_probs_mean, ntoken_probs_mean, biggers, counts))
+    print data_matrix
+    table = ff.create_table(data_matrix, height_constant=20)
+    plot(table)
+
+
     data = traces
     layout = Layout(
         title="",
@@ -166,6 +203,27 @@ def compare_all_tokens_vs_ntokens():
     )
     fig = Figure(data=data, layout=layout)
     plot(fig)
+
+    print ntoken_probs_mean
+    print all_tokens_probs_mean
+    traces.append(Scatter(x=range(1,19), y=ntoken_probs_mean, name="N tokens"))
+    traces.append(Scatter(x=range(1,19), y=all_tokens_probs_mean, name="All tokens"))
+    data = traces
+    layout = Layout(
+        title="Comparison between performance of neural network trained on all tokens and N tokens",
+        showlegend=True,
+        xaxis=XAxis(
+            title="N tokens"
+        ),
+        yaxis=YAxis(
+            title="Probabilities"
+        ),
+
+    )
+    fig = Figure(data=data, layout=layout)
+    plot(fig)
+
+
 
 # Inter rater agreement on heads
 def inter_rater():
@@ -247,32 +305,54 @@ def plot_kmeans():
 
 
 def plot_scatter_binary_search_correct_incorrect():
-    subject = directories[0]
-    path = result_path + subject + "/thresholds/all_tokens_annotate.csv"
-    print path
-    data = pd.read_csv(path)
-    data = data.sort_values("0", ascending=False)
-    grouped = data["0"].groupby(data["label"])
-    print grouped.get_group(0)
+    all_data = pd.DataFrame()
+    for dir in directories:
+        path = result_path + dir + "/thresholds/10_annotate.csv"
+        print path
+        data = pd.read_csv(path)
+        all_data = all_data.append(data)
+    all_data = all_data.sort_values("0", ascending=False)
+    grouped = all_data["0"].groupby(all_data["label"])
+    _10_group_0 = grouped.get_group(0).sort_values()
+    _10_group_1 = grouped.get_group(1).sort_values()
+    # trace_correct = Scatter(x=range(len(group_1.index)), y=group_1, mode="markers", marker=dict(color="rgb(0,255,0)"), name="Correct")
+    # trace_incorrect = Scatter(x=range(len(group_0.index)), y=group_0, mode="markers", marker=dict(color="rgb(255,0,0)"), name="Incorrect")
+    #
+    # data = [trace_correct, trace_incorrect]
+    # layout = Layout(title="Tweets about voetbal which are classified correctly or <br> incorrectly using the Binary Search method.", xaxis=dict(title="Tweet id"),
+    #                 yaxis=dict(title="Probabilities from the word2vec model"))
+    # fig = Figure(data=data, layout=layout)
+    all_data = pd.DataFrame()
+    for dir in directories:
+        path = result_path + dir + "/thresholds/all_tokens_annotate.csv"
+        print path
+        data = pd.read_csv(path)
+        all_data = all_data.append(data)
+    all_data = all_data.sort_values("0", ascending=False)
+    grouped = all_data["0"].groupby(all_data["label"])
+    all_group_0 = grouped.get_group(0).sort_values()
+    all_group_1 = grouped.get_group(1).sort_values()
 
-    trace_correct = Scatter(x=grouped.get_group(1).index, y=grouped.get_group(1).values.tolist(), mode="markers", marker=dict(color="rgb(0,255,0)"), name="Correct")
-    trace_incorrect = Scatter(x=grouped.get_group(0).index, y=grouped.get_group(0).values.tolist(), mode="markers", marker=dict(color="rgb(255,0,0)"), name="Incorrect")
+    import plotly.figure_factory as ff
+    hist_data = [_10_group_0, _10_group_1, all_group_0, all_group_1]
+    colors = ["red", "green", "blue", "orange"]
+    group_labels = ['10 Tokens incorrect', '10 Tokens correct', 'All tokens incorrect', 'All tokens correct']
 
-    data = [trace_correct, trace_incorrect]
-    layout = Layout(title="Tweets about voetbal which are classified correctly or <br> incorrectly using the Binary Search method.", xaxis=dict(title="Tweet id"),
-                    yaxis=dict(title="Probabilities from the word2vec model"))
-    fig = Figure(data=data, layout=layout)
+    # Create distplot with custom bin_size
+    fig = ff.create_distplot(hist_data, group_labels, show_hist=False, show_rug=False, colors=colors)
+    fig['layout'].update(title='Distplot with Normal Distribution', yaxis=dict(title="Frequency"), xaxis=dict(title="Hierarchical softmax value"))
     plot(fig)
 
-
-
 def plot_histogram_binary_search_correct_incorrect():
-    subject = directories[0]
-    path = result_path + subject + "/thresholds/all_tokens_annotate.csv"
-    print path
-    data = pd.read_csv(path)
-    data = data.sort_values("0", ascending=False)
-    grouped = data["0"].groupby(data["label"])
+    all_data = pd.DataFrame()
+    for dir in directories:
+        path = result_path + dir + "/thresholds/all_tokens_annotate.csv"
+        print path
+        data = pd.read_csv(path)
+        all_data = all_data.append(data)
+    print all_data
+    all_data = all_data.sort_values("0", ascending=False)
+    grouped = all_data["0"].groupby(all_data["label"])
     print grouped.get_group(0)
 
     trace_correct = Histogram(y=grouped.get_group(1).index, x=grouped.get_group(1).values.tolist(), xbins=dict(start=0.9995, end=1.000, size=0.0001),
@@ -289,6 +369,149 @@ def plot_histogram_binary_search_correct_incorrect():
     fig = Figure(data=data, layout=layout)
     plot(fig)
 
+
+def prec_recall_thresholds():
+    # show 10_annotate and all_tokens_annotate in a single figure
+    all_data = pd.DataFrame()
+    for dir in directories:
+        path = result_path + dir + "/thresholds/10_annotate.csv"
+        data = pd.read_csv(path)
+        all_data = all_data.append(data)
+    all_data = all_data.sort_values("0", ascending=False)
+    grouped = all_data["0"].groupby(all_data["label"])
+    group_0 = grouped.get_group(0)
+    group_1 = grouped.get_group(1)
+    print all_data["0"].min()
+    # for different thresholds
+    thresholds = range(int((1.000000 - all_data["0"].min())*1000000)+2)
+    thresholds = [(0.000001 *x)+all_data["0"].min() for x in thresholds]
+    print thresholds
+    ps = []
+    rs = []
+    f1s = []
+    accs = []
+    for t in thresholds:
+        true_positives = group_1[group_1.values > t].count()
+        false_positives = group_0[group_0.values > t].count()
+        # true negatives are not used, which is a flaw
+        true_negatives = group_0[group_0.values < t].count()
+        false_negatives = group_1[group_1.values < t].count()
+
+        if float(true_positives + false_positives) == 0:
+            precision = true_positives / 0.000001
+            continue
+
+        else:
+            precision = true_positives / float(true_positives + false_positives)
+
+        if true_positives+false_negatives == 0:
+            recall = float(true_positives / 0.00000001)
+            continue
+        else:
+            recall = float(true_positives/float(true_positives+false_negatives))
+
+
+        if precision + recall == 0:
+            f1 = 2 * ((precision * recall) / 0.000001)
+            continue
+        else:
+            f1 = 2 * ((precision * recall) / (precision + recall))
+
+        if (float(true_negatives) + false_negatives) == 0:
+            acc = ((true_positives + false_positives)/(0.0000001))/len(all_data.index)
+            continue
+        else:
+            acc = ((true_positives + false_positives) / (float(true_negatives) + false_negatives)) / len(all_data.index)
+
+        ps.append(precision)
+        rs.append(recall)
+        f1s.append(f1)
+        accs.append(acc)
+
+    # for all_tokens_annotate
+    all_data = pd.DataFrame()
+    for dir in directories:
+        path = result_path + dir + "/thresholds/all_tokens_annotate.csv"
+        print path
+        data = pd.read_csv(path)
+        all_data = all_data.append(data)
+    all_data = all_data.sort_values("0", ascending=False)
+    grouped = all_data["0"].groupby(all_data["label"])
+    group_0 = grouped.get_group(0)
+    group_1 = grouped.get_group(1)
+
+    # for different thresholds
+    thresholds = range(int((1.000000 - 0.999526)*1000000)+2)
+    thresholds = [(0.000001 *x)+0.999526 for x in thresholds]
+
+    all_tokens_ps = []
+    all_tokens_rs = []
+    all_tokens_f1s = []
+    all_tokens_accs = []
+    for t in thresholds:
+        true_positives = group_1[group_1.values > t].count()
+        false_positives = group_0[group_0.values > t].count()
+        # true negatives are not used, which is a flaw
+        true_negatives = group_0[group_0.values < t].count()
+        false_negatives = group_1[group_1.values < t].count()
+        if float(true_positives + false_positives) == 0:
+            precision = true_positives / 0.000001
+            continue
+        else:
+            precision = true_positives / float(true_positives + false_positives)
+        # precision = true_positives/float(true_positives + false_positives)
+        if float(true_positives+false_negatives) == 0.0:
+            recall = float(true_positives / 0.0000001)
+            print "error"
+            continue
+        else:
+            recall = float(true_positives/float(true_positives+false_negatives))
+
+        f1 = 2* ((precision * recall)/(precision + recall))
+        acc = ((true_positives + false_positives)/(float(true_negatives) + false_negatives))/len(all_data.index)
+        all_tokens_ps.append(precision)
+        all_tokens_rs.append(recall)
+        all_tokens_f1s.append(f1)
+        all_tokens_accs.append(acc)
+
+
+
+
+
+    trace = Scatter(x=ps, y=rs, mode="markers", name="10 tokens")
+    all_tokens_trace = Scatter(x=all_tokens_ps, y=all_tokens_rs, mode="markers", name="All tokens")
+    data = [trace, all_tokens_trace]
+    layout = Layout(
+        title="Precision and Recall using Binary Search method for two different methods",
+        xaxis=dict(title="Recall"),
+        yaxis=dict(title="Precision"))
+    fig = Figure(data=data, layout=layout)
+    plot(fig)
+    time.sleep(2)
+    #
+    # trace = Scatter(x=thresholds, y=f1s, mode="markers", name="10 tokens")
+    # all_tokens_trace = Scatter(x=thresholds, y=all_tokens_f1s, mode="markers", name="All tokens")
+    #
+    # data = [trace, all_tokens_trace]
+    # layout = Layout(
+    #     title="F1 score using Binary Search method for two different methods.",
+    #     xaxis=dict(title="Threshold"),
+    #     yaxis=dict(title="F1 score"))
+    # fig = Figure(data=data, layout=layout)
+    # plot(fig)
+    # time.sleep(2)
+    # print "ACCS", accs
+    # trace = Scatter(x=thresholds, y=accs, mode="markers", name="10 tokens")
+    # all_tokens_trace = Scatter(x=thresholds, y=all_tokens_accs, mode="markers", name="All tokens")
+    #
+    # data = [trace, all_tokens_trace]
+    # layout = Layout(
+    #     title="Accuracy using Binary Search method for two different methods.",
+    #     xaxis=dict(title="Threshold"),
+    #     yaxis=dict(title="Accuracy"))
+    # fig = Figure(data=data, layout=layout)
+    # plot(fig)
+
 def plot_f1():
     data = pd.read_hdf("/home/robert/lambert/metrics.h5")
     print data
@@ -301,6 +524,8 @@ def plot_f1():
     traces = [trace, trace_smooth]
     fig = Figure(data=traces, layout=layout)
     plot(fig)
+
+
 
 
 def plot_loss():
@@ -335,11 +560,11 @@ def plot_train_test():
 
 
 
-
-import time
+#
+# import time
 # acc_100()
 # time.sleep(2)
-# acc_heads()
+acc_heads()
 # time.sleep(2)
 # acc_all_ntokens()
 # time.sleep(2)
@@ -353,6 +578,7 @@ import time
 # plot_histogram_binary_search_correct_incorrect()
 # time.sleep(2)
 # plot_scatter_binary_search_correct_incorrect()
+# prec_recall_thresholds()
 # time.sleep(2)
 # plot_train_test()
 # time.sleep(2)
@@ -360,4 +586,4 @@ import time
 # time.sleep(2)
 # plot_f1()
 # heads_compared_to_alltokens_using_ntokens()
-compare_all_tokens_vs_ntokens()
+# compare_all_tokens_vs_ntokens()

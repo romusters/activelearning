@@ -53,7 +53,7 @@ def get_vectors(data_name, vector_name, model_name):
 def test_model(fname):
     import features
     data = pd.HDFStore(fname + ".h5")["data"]
-    words = ["voetbal", "moslim", "1", "porno", "advertentie"]
+    words = ["voetbal"] #, "moslim", "1", "porno", "advertentie"]
     for word in words:
         print word.upper()
         words = data["words"].values.tolist()
@@ -73,5 +73,6 @@ def test_model(fname):
             print data.words[el]
 
 
+test_model("/home/robert/lambert/models/w2vmodel")
 # w2vmodel_to_hdf("/home/robert/lambert/w2vmodel")
 # get_vectors("/home/robert/lambert/datasets/data_sample.csv", "/home/robert/lambert/datasets/vectors.h5","/home/robert/lambert/models/w2vmodel")

@@ -112,6 +112,37 @@ def get_all_voetbal():
     ids = vectors[vectors.id.isin(set(voetbal_ids))]["id"]
     return ids
 
+
+def get_all_not_voetbal():
+    import os
+    result_path = "/media/robert/DataUbuntu/Dropbox/Dropbox/Master/proefpersonen/"
+    directories = [d for d in os.listdir(result_path) if os.path.isdir(result_path + d)]
+
+    voetbal_ids = []
+    import pandas as pd
+    for dir in directories:
+        for token in n_tokens:
+            head_data = pd.read_csv(result_path + dir + "/" + str(token) + "_head.csv", usecols=["id", "label"])
+            head_data = head_data[head_data.label == 0]
+            voetbal_ids.extend(head_data.id.values.tolist())
+
+        head_all_token_data = pd.read_csv(result_path + dir + "/all_tokens_head.csv", usecols=["id", "label"])
+        head_all_token_data = head_all_token_data[head_all_token_data.label == 0]
+        voetbal_ids.extend(head_all_token_data.id.values.tolist())
+        all_token_data = pd.read_csv(result_path + dir + "/thresholds/10_annotate.csv", usecols=["id", "label"])
+        all_token_data = all_token_data[all_token_data.label == 0]
+        voetbal_ids.extend(all_token_data.id.values.tolist())
+        all_token_data = pd.read_csv(result_path + dir + "/thresholds/all_tokens_annotate.csv", usecols=["id", "label"])
+        all_token_data = all_token_data[all_token_data.label == 0]
+        voetbal_ids.extend(all_token_data.id.values.tolist())
+    voetbal_ids = list(set(voetbal_ids))
+    voetbal_ids.sort()
+    print voetbal_ids
+    # print set(voetbal_ids)
+    vectors = pd.read_hdf(vector_path)
+    ids = vectors[vectors.id.isin(set(voetbal_ids))]["id"]
+    return ids
+
 def normality():
     ids = get_all_voetbal()
     vectors = pd.read_hdf(vector_path)
@@ -123,7 +154,15 @@ def normality():
     print stats.describe(ps)
     print len(ps[ps < 0.05])
         # plot loss, accuracy
-
+    print stats.kstest([v[0] for v in vectors.values.tolist()], "uniform")
 
 # get_all_voetbal()
+# get_all_not_voetbal()
 # normality()
+
+import numpy as np
+
+data = np.random.uniform(size=(100,100,100))
+# print data
+import scipy.stats as stats
+print stats.mstats.normaltest(data, axis=0).pvalue
