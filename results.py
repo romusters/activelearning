@@ -559,12 +559,39 @@ def plot_train_test():
     plot(fig)
 
 
+def plot_cluster_member_ratio_and_max():
+    data = [(2, 351), (35, 137), (7, 86), (9, 52), (33, 53), (15, 45), (18, 35), (26, 35), (30, 30), (23, 24), (24, 24), (18, 24), (15, 24), (17, 19), (13, 18), (14, 18), (16, 19), (11, 15), (13, 17), (15, 17), (12, 17), (14, 14), (14, 14), (13, 14), (10, 13), (9,12)]
+    ratios = []
+    max = []
+    for e in data:
+        ratios.append(e[0])
+        max.append(e[1])
+    _range = range(10, 520, 20)
+    trace_ratios = Scatter(x=_range, y=ratios)
+    traces = [trace_ratios]
+    print traces
+    layout = Layout(title="Ratio of soccer versus non-soccer tweets in largest cluster",
+                    xaxis=dict(title="K"), yaxis=dict(title="Ratio of correct versus incorrect tweets"))
+    fig = Figure(data=traces, layout=layout)
+    plot(fig)
+
+    import time
+    time.sleep(2)
+    trace_max = Scatter(x=_range, y=max)
+    traces = [trace_max]
+    layout = Layout(title="Amount of soccer tweets in largest cluster",
+                    xaxis=dict(title="K"),
+                    yaxis=dict(title="Amount of datapoints"))
+
+    fig = Figure(data=traces, layout=layout)
+    plot(fig)
+
 
 #
 # import time
 # acc_100()
 # time.sleep(2)
-acc_heads()
+# acc_heads()
 # time.sleep(2)
 # acc_all_ntokens()
 # time.sleep(2)
@@ -586,4 +613,5 @@ acc_heads()
 # time.sleep(2)
 # plot_f1()
 # heads_compared_to_alltokens_using_ntokens()
-# compare_all_tokens_vs_ntokens()
+# compare_all_tokens_vs_ntokens
+plot_cluster_member_ratio_and_max()

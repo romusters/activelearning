@@ -89,5 +89,12 @@ def predict():
         # df.write.format("com.databricks.spark.csv").mode("overwrite").save("lambert_w2v_data_cluster.csv")
         # df.write.parquet("hdfs:///user/rmusters/lambert_w2v_data_cluster", mode="overwrite")
 
-train()
-predict()
+
+def to_csv():
+    for i in _range:
+        data = sqlContext.read.parquet("clusters_" + str(i))
+        data.write.format("com.databricks.spark.csv").mode("overwrite").save("clusters_" + str(i) + ".csv")
+
+# train()
+# predict()
+to_csv()
