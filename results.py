@@ -12,7 +12,7 @@ import time
 import config
 root, data_path, model_path, vector_path = config.get_paths()
 
-result_path = "/media/robert/DataUbuntu/Dropbox/Dropbox/Master/proefpersonen/"
+result_path = "/media/robert/DataUbuntu/Dropbox/Dropbox/Dropbox/Master/proefpersonen/"
 import os
 directories=[d for d in os.listdir(result_path) if os.path.isdir(result_path + d)]
 
@@ -71,7 +71,7 @@ def acc_heads():
     traces.append(Box(y=dict["all tokens"], name="all tokens"))
     data = traces
     layout = Layout(
-        title="Number of correct top 20 tweets with heighest softmax value per amount of tokens",
+        title="Number of correct top 20 tweets with highest softmax value per amount of tokens",
         showlegend=False,
         yaxis=YAxis(
             title="Number of correct tweets"
@@ -298,7 +298,7 @@ def plot_kmeans():
     trace = Scatter(x=x, y=y, mode="markers", marker=dict(color="rgb(0,0,0)"))
 
     data = [trace]
-    layout = Layout(title="WSSSE for different amount of clusters", xaxis=dict(title="Clusters"),
+    layout = Layout(title="WSSSE for different amount of clusters", xaxis=dict(title="K"),
                     yaxis=dict(title="WSSSE"))
     fig = Figure(data=data, layout=layout)
     plot(fig)
@@ -313,8 +313,9 @@ def plot_scatter_binary_search_correct_incorrect():
         all_data = all_data.append(data)
     all_data = all_data.sort_values("0", ascending=False)
     grouped = all_data["0"].groupby(all_data["label"])
-    _10_group_0 = grouped.get_group(0).sort_values()
-    _10_group_1 = grouped.get_group(1).sort_values()
+    _10_group_0 = grouped.get_group(0).sort_values().values.tolist()
+    _10_group_1 = grouped.get_group(1).sort_values().values.tolist()
+    print len(_10_group_0), len(_10_group_1)
     # trace_correct = Scatter(x=range(len(group_1.index)), y=group_1, mode="markers", marker=dict(color="rgb(0,255,0)"), name="Correct")
     # trace_incorrect = Scatter(x=range(len(group_0.index)), y=group_0, mode="markers", marker=dict(color="rgb(255,0,0)"), name="Incorrect")
     #
@@ -330,18 +331,65 @@ def plot_scatter_binary_search_correct_incorrect():
         all_data = all_data.append(data)
     all_data = all_data.sort_values("0", ascending=False)
     grouped = all_data["0"].groupby(all_data["label"])
-    all_group_0 = grouped.get_group(0).sort_values()
-    all_group_1 = grouped.get_group(1).sort_values()
+    all_group_0 = grouped.get_group(0).sort_values().values.tolist()
+    all_group_1 = grouped.get_group(1).sort_values().values.tolist()
+    print len(all_group_0), len(all_group_1)
+    # normalize data
+    # from sklearn import preprocessing
+    # min_max_scaler = preprocessing.MinMaxScaler()
+    # _10_group_0 = min_max_scaler.fit_transform(_10_group_0.values.tolist())
+    # _10_group_1 = min_max_scaler.fit_transform(_10_group_1.values.tolist())
+    # all_group_0 = min_max_scaler.fit_transform(all_group_0.values.tolist())
+    # all_group_1 = min_max_scaler.fit_transform(all_group_1.values.tolist())
+
+    # import seaborn as sns
+    # from scipy.stats import norm
+    # # sns.distplot(_10_group_0, kde=False, hist=False, fit=norm)
+    # # sns.distplot(_10_group_1, kde=False, hist=False, fit=norm)
+    # sns.distplot(all_group_0, kde=False, hist=False)
+    # # sns.distplot(all_group_1, kde=False, hist=False, fit=norm)
+    # sns.plt.show()
+    # import sys
+    # sys.exit(0)
 
     import plotly.figure_factory as ff
-    hist_data = [_10_group_0, _10_group_1, all_group_0, all_group_1]
+    hist_data = [_10_group_0, _10_group_1]
     colors = ["red", "green", "blue", "orange"]
-    group_labels = ['10 Tokens incorrect', '10 Tokens correct', 'All tokens incorrect', 'All tokens correct']
+    group_labels = ['10 tokens incorrect', '10 tokens correct']
+
+    # Create distplot with custom bin_size
+    fig = ff.create_distplot(hist_data, group_labels, show_hist=False, show_rug=False, colors=colors, bin_size=1)
+    fig['layout'].update(title='Distribution of softmax values for 10 tokens method', yaxis=dict(title="Frequency"), xaxis=dict(title="Hierarchical softmax value"))
+    plot(fig)
+
+    import time
+    time.sleep(2)
+    import plotly.figure_factory as ff
+    hist_data = [all_group_0, all_group_1]
+    colors = ["red", "green", "blue", "orange"]
+    group_labels = ['All tokens incorrect', 'All tokens correct']
 
     # Create distplot with custom bin_size
     fig = ff.create_distplot(hist_data, group_labels, show_hist=False, show_rug=False, colors=colors)
-    fig['layout'].update(title='Distplot with Normal Distribution', yaxis=dict(title="Frequency"), xaxis=dict(title="Hierarchical softmax value"))
+    fig['layout'].update(title='Distribution of softmax values for all tokens method', yaxis=dict(title="Frequency"),
+                         xaxis=dict(title="Hierarchical softmax value"))
     plot(fig)
+    # import matplotlib.pyplot as plt
+    # import numpy as np
+    # import matplotlib.mlab as mlab
+    # import math
+    # all_group_0 = all_group_1[:-300]
+    # print all_group_0
+    # mu = np.array(all_group_0).mean()
+    # print mu
+    # variance = np.array(all_group_0).var()
+    # sigma = math.sqrt(variance)
+    # print sigma
+    # x  = np.arange(0.999, 1, 0.0001)
+    # plt.plot(x, mlab.normpdf(x, mu, sigma))
+    #
+    # plt.show()
+
 
 def plot_histogram_binary_search_correct_incorrect():
     all_data = pd.DataFrame()
@@ -377,6 +425,7 @@ def prec_recall_thresholds():
         path = result_path + dir + "/thresholds/10_annotate.csv"
         data = pd.read_csv(path)
         all_data = all_data.append(data)
+    print all_data
     all_data = all_data.sort_values("0", ascending=False)
     grouped = all_data["0"].groupby(all_data["label"])
     group_0 = grouped.get_group(0)
@@ -535,7 +584,7 @@ def plot_loss():
     import numpy as np
     y = np.convolve(data["loss"], np.ones((10,)) / 10, mode="valid")
     trace_smooth = Scatter(x=range(len(data["loss"])), y=y, name="Loss smoothed", line=dict(width=1))
-    layout = Layout(title="Loss for voetbal and jihad datasets",
+    layout = Layout(title="Loss for voetbal and jihad data",
                     xaxis=dict(title="Iterations"), yaxis=dict(title="Loss"))
     traces = [trace, trace_smooth]
     fig = Figure(data=traces, layout=layout)
@@ -587,31 +636,119 @@ def plot_cluster_member_ratio_and_max():
     plot(fig)
 
 
+def plot_groupsizes():
+    range = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]
+    voetbal = [2, 24, 102, 217, 329, 563, 1162, 1966, 2997, 2753, 2065, 851, 364, 119, 49,27,17,18,1,1]
+    jihad = [7, 34, 70, 67, 125, 129,205,246, 211, 172, 92, 98, 46, 27, 7, 2, 1]
+    trace_voetbal = Scatter(x=range, y=voetbal, name="voetbal")
+    import numpy as np
+    print np.array(voetbal).sum()
+    print np.array(jihad).sum()
+    trace_jihad = Scatter(x=range, y=jihad, name="jihad")
+    traces = [trace_voetbal, trace_jihad]
+    layout = Layout(title="Number of tweets in ntoken groups",
+                    xaxis=dict(title="Ntokens group", autotick=False),
+                    yaxis=dict(title="Number of tweets"))
+    fig = Figure(data=traces, layout=layout)
+    # plot(fig)
+
+
+
+def test():
+
+    all_data = pd.DataFrame()
+    for dir in directories:
+        path = result_path + dir + "/thresholds/all_tokens_annotate.csv"
+        print path
+        data = pd.read_csv(path)
+        all_data = all_data.append(data)
+    all_data = all_data.sort_values("0", ascending=False)
+    grouped = all_data["0"].groupby(all_data["label"])
+    _10_group_0 = grouped.get_group(0).sort_values().values.tolist()
+    _10_group_1 = grouped.get_group(1).sort_values().values.tolist()
+    print len(_10_group_0), len(_10_group_1)
+    trace_correct = Scatter(x=range(len(_10_group_1)), y=_10_group_1, mode="markers", marker=dict(color="rgb(0,255,0)"), name="Correct")
+    trace_incorrect = Scatter(x=range(len(_10_group_0)), y=_10_group_0, mode="markers", marker=dict(color="rgb(255,0,0)"), name="Incorrect")
+    # trace_correct = Histogram(x=_10_group_1, name="Correct", )
+    # trace_incorrect = Histogram(x=_10_group_0, name="Incorrect")
+
+    data = [trace_correct, trace_incorrect]
+    layout = Layout(title="Tweets about voetbal which are classified correctly or <br> incorrectly using the Binary Search method.", xaxis=dict(title="Tweet id"),
+                    yaxis=dict(title="Probabilities from the word2vec model"))
+    fig = Figure(data=data, layout=layout)
+    # plot(fig)
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
+    print _10_group_1
+    y, binEdges= np.histogram(_10_group_1, bins=20)
+    bincenters = 0.00001 + 0.5 * (binEdges[1:] + binEdges[:-1])
+    plt.plot(bincenters, y, color="green", label="Correct")
+
+    y, binEdges = np.histogram(_10_group_0, bins=20)
+    from scipy.interpolate import spline
+    bincenters = 0.00001 + 0.5 * (binEdges[1:] + binEdges[:-1])
+    plt.plot(bincenters, y, color="red", label="Incorrect")
+
+    sns.plt.xticks(fontsize=16)
+    sns.plt.yticks(fontsize=16)
+    plt.ticklabel_format(useOffset=False)
+    plt.title("Distribution of softmax values for all tokens method", fontsize=30)
+    plt.xlabel("Hierarchical softmax value", fontsize=20)
+    plt.ylabel("Frequency", fontsize=20)
+    plt.legend(fontsize=20)
+    plt.show()
+    #
+    #
+    # import scipy.stats as stats
+    #
+    # noise = np.random.normal(0, 1, (1000,))
+    # density = stats.gaussian_kde(_10_group_1)
+    # n, x, _ = plt.hist(_10_group_1, histtype='step')
+    # plt.plot(x, density(x))
+    # plt.show()
+
+test()
+
 #
 # import time
 # acc_100()
 # time.sleep(2)
+
 # acc_heads()
 # time.sleep(2)
+
 # acc_all_ntokens()
 # time.sleep(2)
+
 # inter_rater()
 # time.sleep(2)
+
 # plot_kmeans()
 # time.sleep(2)
+
 # import clusters
 # clusters.voetbal_in_clusters()
 # time.sleep(2)
+
 # plot_histogram_binary_search_correct_incorrect()
 # time.sleep(2)
+
 # plot_scatter_binary_search_correct_incorrect()
 # prec_recall_thresholds()
 # time.sleep(2)
+
 # plot_train_test()
 # time.sleep(2)
+
 # plot_loss()
 # time.sleep(2)
+
 # plot_f1()
 # heads_compared_to_alltokens_using_ntokens()
 # compare_all_tokens_vs_ntokens
-plot_cluster_member_ratio_and_max()
+# plot_cluster_member_ratio_and_max()
+# plot_groupsizes()
+# from scipy import stats
+# stats.kstest(x, 'uniform')

@@ -84,7 +84,7 @@ def normality_voetbal():
 
 def get_all_voetbal():
     import os
-    result_path = "/media/robert/DataUbuntu/Dropbox/Dropbox/Master/proefpersonen/"
+    result_path = "/media/robert/DataUbuntu/Dropbox/Dropbox/Dropbox/Master/proefpersonen/"
     directories = [d for d in os.listdir(result_path) if os.path.isdir(result_path + d)]
 
     voetbal_ids = []
@@ -115,7 +115,7 @@ def get_all_voetbal():
 
 def get_all_not_voetbal():
     import os
-    result_path = "/media/robert/DataUbuntu/Dropbox/Dropbox/Master/proefpersonen/"
+    result_path = "/media/robert/DataUbuntu/Dropbox/Dropbox/Dropbox/Master/proefpersonen/"
     directories = [d for d in os.listdir(result_path) if os.path.isdir(result_path + d)]
 
     voetbal_ids = []
@@ -154,15 +154,15 @@ def normality():
     print stats.describe(ps)
     print len(ps[ps < 0.05])
         # plot loss, accuracy
-    print stats.kstest([v[0] for v in vectors.values.tolist()], "uniform")
+    print stats.kstest([v[0] for v in vectors.values.tolist()], "uniform", alternative="two-sided")
+    print stats.mstats.kurtosis([v[0] for v in vectors.values.tolist()], axis=0, fisher=True, bias=True)
+    print stats.mstats.kurtosistest([v[0] for v in vectors.values.tolist()])
 
-# get_all_voetbal()
-# get_all_not_voetbal()
 # normality()
 
-import numpy as np
+# import numpy as np
 
-data = np.random.uniform(size=(100,100,100))
-# print data
-import scipy.stats as stats
-print stats.mstats.normaltest(data, axis=0).pvalue
+# data = np.random.uniform(size=(100,100,100))
+# # print data
+# import scipy.stats as stats
+# print stats.mstats.normaltest(data, axis=0).pvalue
